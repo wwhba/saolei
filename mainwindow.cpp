@@ -26,7 +26,8 @@ MainWindow::MainWindow(QWidget *parent)
       currentDifficulty(Beginner),
       leftClickMapper(new QSignalMapper(this)),
       rightClickMapper(new QSignalMapper(this)),
-      isFirstClick(true)  // 新增：初始化首次点击标记
+      isFirstClick(true), // 新增：初始化首次点击标记
+      timeRecorder(new TimeRecorder(this))  // 初始化时间记录器
 {
     setWindowTitle("扫雷");
     setupUI();
@@ -41,6 +42,21 @@ MainWindow::MainWindow(QWidget *parent)
     // 设置初始难度
     setDifficulty(Beginner);
     resetGame();
+    // 窗口先根据内容自动调整大小
+    adjustSize();
+
+    // 再居中显示（动态获取屏幕和窗口尺寸）
+    QDesktopWidget *desktop = QApplication::desktop();
+    int screenWidth = desktop->width();
+    int screenHeight = desktop->height();
+    int windowWidth = width();
+    int windowHeight = height();
+    setGeometry(
+        (screenWidth - windowWidth) / 2,
+        (screenHeight - windowHeight) / 2,
+        windowWidth,
+        windowHeight
+    );
 }
 
 MainWindow::~MainWindow()
@@ -86,6 +102,27 @@ void MainWindow::setupUI()
     timeLabel->setFixedWidth(50);
     topLayout->addWidget(timeLabel);
 
+    // 新增：查看记录按钮
+    QPushButton* recordsButton = new QPushButton("查看记录", this);
+    topLayout->addWidget(recordsButton);
+    connect(recordsButton, &QPushButton::clicked, [this]() {
+        QList<TimeRecord> records = timeRecorder->getSortedRecords();
+        if (records.isEmpty()) {
+            QMessageBox::information(this, "游戏记录", "暂无记录");
+            return;
+        }
+
+        QString message = "游戏记录 (按时间排序):\n\n";
+        for (const auto& record : records) {
+            message += QString("%1秒 - %2 - %3\n")
+                .arg(record.seconds)
+                .arg(record.date.toString("yyyy-MM-dd HH:mm:ss"))
+                .arg(record.difficulty);
+        }
+
+        QMessageBox::information(this, "游戏记录", message);
+    });
+
     // 将顶部区域添加到主布局
     mainLayout->addWidget(topWidget);
 
@@ -96,6 +133,7 @@ void MainWindow::setupUI()
     gridLayout->setMargin(0);
     gridLayout->setSizeConstraint(QLayout::SetFixedSize);
     mainLayout->addLayout(gridLayout);
+
 
     // 居中窗口
     QDesktopWidget *desktop = QApplication::desktop();
@@ -139,7 +177,7 @@ void MainWindow::initBoard()
     board.clear();
     board.resize(rows, std::vector<Cell>(cols));
 
-    int btnSize = 25;
+    int btnSize = 40;
     for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < cols; ++j) {
             board[i][j].button = new QPushButton(this);
@@ -234,7 +272,7 @@ void MainWindow::revealCell(int row, int col)
             case 8: color = "gray"; break;
             default: color = "black";
         }
-        board[row][col].button->setStyleSheet(QString("color: %1;").arg(color));
+        board[row][col].button->setStyleSheet(QString("color: %1; font-size: 20px;").arg(color));
     } else {
         for (int x = qMax(0, row-1); x <= qMin(rows-1, row+1); ++x) {
             for (int y = qMax(0, col-1); y <= qMin(cols-1, col+1); ++y) {
@@ -286,7 +324,24 @@ void MainWindow::checkGameStatus()
         gameOver = true;
         timer->stop();
         resetButton->setText("😊");
-        QMessageBox::information(this, "游戏胜利", "恭喜你赢了！");
+        /*QMessageBox::information(this, "游戏胜利", "恭喜你赢了！");*/
+        // 记录通关时间
+        timeRecorder->addRecord(secondsElapsed, getDifficultyString());
+
+        QMessageBox::information(this, "游戏胜利",
+            QString("恭喜你赢了！用时: %1 秒\n\n难度: %2")
+                .arg(secondsElapsed)
+                .arg(getDifficultyString()));
+    }
+}
+// 新增方法，返回难度的文本描述
+QString MainWindow::getDifficultyString() const
+{
+    switch (currentDifficulty) {
+        case Beginner: return "初级";
+        case Intermediate: return "中级";
+        case Expert: return "高级";
+        default: return "未知";
     }
 }
 
@@ -399,4 +454,5 @@ void MainWindow::resetGame()
     gameStarted = false;
     resetButton->setText("🙂");
     initBoard();
+
 }

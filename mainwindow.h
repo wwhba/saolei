@@ -8,6 +8,7 @@
 #include <QComboBox>
 #include <QSignalMapper>
 #include <vector>
+#include "timerecorder.h"
 
 class MainWindow : public QMainWindow
 {
@@ -58,6 +59,9 @@ private:
     QSignalMapper *leftClickMapper;
     QSignalMapper *rightClickMapper;
 
+    // 新增时间记录器
+    TimeRecorder* timeRecorder;
+
     void setupUI();
     void setDifficulty(Difficulty diff);
     void initBoard();
@@ -68,6 +72,7 @@ private:
     void checkGameStatus();
     void resetGame();
     void updateMineCount();
+    QString getDifficultyString() const;  // 新增方法
 };
 
 #endif // MAINWINDOW_H
