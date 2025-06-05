@@ -47,6 +47,8 @@ private:
     int rows, cols, numMines;
     Difficulty currentDifficulty;
 
+    int firstClickRow, firstClickCol;     // 记录首次点击的行列位置
+    bool isFirstClick;                      // 标记是否为首次点击
     // UI 控件
     QComboBox *difficultyCombo;
     QLabel *mineCountLabel;

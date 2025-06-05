@@ -8,7 +8,7 @@
 #include <cstdlib>
 #include <ctime>
 
-MainWindow::MainWindow(QWidget *parent) :
+/*MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     timer(new QTimer(this)),
     secondsElapsed(0),
@@ -16,7 +16,17 @@ MainWindow::MainWindow(QWidget *parent) :
     gameStarted(false),
     currentDifficulty(Beginner),
     leftClickMapper(new QSignalMapper(this)),
-    rightClickMapper(new QSignalMapper(this))
+    rightClickMapper(new QSignalMapper(this))*/
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent),
+      timer(new QTimer(this)),
+      secondsElapsed(0),
+      gameOver(false),
+      gameStarted(false),
+      currentDifficulty(Beginner),
+      leftClickMapper(new QSignalMapper(this)),
+      rightClickMapper(new QSignalMapper(this)),
+      isFirstClick(true)  // 新增：初始化首次点击标记
 {
     setWindowTitle("扫雷");
     setupUI();
@@ -299,7 +309,7 @@ void MainWindow::updateMineCount()
     mineCountLabel->setText(QString("%1").arg(remaining, 3, 10, QChar('0')));
 }
 
-void MainWindow::onButtonClicked(int position)
+/*void MainWindow::onButtonClicked(int position)
 {
     int row = position / cols;
     int col = position % cols;
@@ -311,6 +321,38 @@ void MainWindow::onButtonClicked(int position)
         placeMines();
         calculateAdjacentMines();
         timer->start(1000);
+    }
+
+    revealCell(row, col);
+    checkGameStatus();
+}*/
+void MainWindow::onButtonClicked(int position) {
+    int row = position / cols;
+    int col = position % cols;
+
+    if (gameOver || board[row][col].isRevealed || board[row][col].isFlagged) return;
+
+    if (!gameStarted) {
+        gameStarted = true;
+        firstClickRow = row;  // 新增：记录首次点击行
+        firstClickCol = col;  // 新增：记录首次点击列
+        timer->start(1000);
+
+        // 修改：首次点击后才生成地雷，确保当前位置不是地雷
+        placeMines();
+        // 如果首次点击位置是地雷，重新生成直到该位置安全
+        while (board[firstClickRow][firstClickCol].isMine) {
+            // 清空当前地雷
+            for (auto& row : board) {
+                for (auto& cell : row) {
+                    cell.isMine = false;
+                }
+            }
+            // 重新生成
+            placeMines();
+        }
+
+        calculateAdjacentMines();
     }
 
     revealCell(row, col);
