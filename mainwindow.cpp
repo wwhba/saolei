@@ -7,7 +7,7 @@
 #include <QDesktopWidget>
 #include <cstdlib>
 #include <ctime>
-
+#include <QInputDialog>
 /*MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     timer(new QTimer(this)),
@@ -27,7 +27,10 @@ MainWindow::MainWindow(QWidget *parent)
       leftClickMapper(new QSignalMapper(this)),
       rightClickMapper(new QSignalMapper(this)),
       isFirstClick(true), // 新增：初始化首次点击标记
-      timeRecorder(new TimeRecorder(this))  // 初始化时间记录器
+      timeRecorder(new TimeRecorder(this)), // 初始化时间记录器
+    challengeTimer(nullptr),  // 先置空
+          challengeSecondsRemaining(0),
+          isChallengeMode(false)
 {
     setWindowTitle("扫雷");
     setupUI();
@@ -122,7 +125,9 @@ void MainWindow::setupUI()
 
         QMessageBox::information(this, "游戏记录", message);
     });
-
+    challengeButton = new QPushButton("挑战", this);
+        topLayout->addWidget(challengeButton);
+        connect(challengeButton, &QPushButton::clicked, this, &MainWindow::onChallengeButtonClicked);
     // 将顶部区域添加到主布局
     mainLayout->addWidget(topWidget);
 
@@ -143,7 +148,61 @@ void MainWindow::setupUI()
     int windowHeight = 400;
     setGeometry((screenWidth - windowWidth) / 2, (screenHeight - windowHeight) / 2, windowWidth, windowHeight);
 }
+void MainWindow::onChallengeButtonClicked()
+{
+    bool ok;
+    int seconds = QInputDialog::getInt(
+        this,
+        "设置挑战时间",
+        "请输入挑战时间（秒）:",
+        60,       // 默认值
+        10,       // 最小值
+        300,      // 最大值
+        1,        // 步长
+        &ok
+    );
 
+    if (ok && seconds > 0) {
+        startChallenge(seconds);
+    }
+}
+void MainWindow::startChallenge(int seconds)
+{
+    isChallengeMode = true;
+    challengeSecondsRemaining = seconds;
+
+    // 重置游戏状态
+    resetGame();
+
+    // 更新时间显示
+    timeLabel->setText(QString("%1").arg(challengeSecondsRemaining, 3, 10, QChar('0')));
+
+    // 启动挑战计时器
+    if (!challengeTimer) {
+        challengeTimer = new QTimer(this);
+        connect(challengeTimer, &QTimer::timeout, this, &MainWindow::updateChallengeTimer);
+    }
+    challengeTimer->start(1000);
+}
+void MainWindow::updateChallengeTimer()
+{
+    if (challengeSecondsRemaining > 0) {
+        challengeSecondsRemaining--;
+        timeLabel->setText(QString("%1").arg(challengeSecondsRemaining, 3, 10, QChar('0')));
+
+        // 时间快用完时变红提醒
+        if (challengeSecondsRemaining <= 10) {
+            timeLabel->setStyleSheet("color: red; font-weight: bold;");
+        }
+    } else {
+        // 时间到，游戏失败
+        challengeTimer->stop();
+        gameOver = true;
+        revealAllMines();
+        resetButton->setText("😞");
+        QMessageBox::critical(this, "挑战失败", "时间已用完！");
+    }
+}
 void MainWindow::setDifficulty(Difficulty diff)
 {
     currentDifficulty = diff;
@@ -177,7 +236,7 @@ void MainWindow::initBoard()
     board.clear();
     board.resize(rows, std::vector<Cell>(cols));
 
-    int btnSize = 40;
+    int btnSize = 50;
     for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < cols; ++j) {
             board[i][j].button = new QPushButton(this);
@@ -258,7 +317,7 @@ void MainWindow::revealCell(int row, int col)
 
     board[row][col].button->setStyleSheet("border: 1px solid #888; background-color: #eee;");
 
-    if (board[row][col].adjacentMines > 0) {
+    if(board[row][col].adjacentMines > 0) {
         board[row][col].button->setText(QString::number(board[row][col].adjacentMines));
         QString color;
         switch (board[row][col].adjacentMines) {
@@ -322,16 +381,26 @@ void MainWindow::checkGameStatus()
             }
         }
         gameOver = true;
-        timer->stop();
-        resetButton->setText("😊");
-        /*QMessageBox::information(this, "游戏胜利", "恭喜你赢了！");*/
-        // 记录通关时间
-        timeRecorder->addRecord(secondsElapsed, getDifficultyString());
 
-        QMessageBox::information(this, "游戏胜利",
-            QString("恭喜你赢了！用时: %1 秒\n\n难度: %2")
-                .arg(secondsElapsed)
-                .arg(getDifficultyString()));
+        // 停止计时器
+        if (isChallengeMode) {
+            challengeTimer->stop();
+            // 记录挑战成功时间
+            timeRecorder->addRecord(challengeSecondsRemaining, getDifficultyString() + " (挑战模式)");
+
+            QMessageBox::information(this, "挑战成功",
+                QString("恭喜你在挑战时间内完成！剩余时间: %1 秒\n\n难度: %2")
+                    .arg(challengeSecondsRemaining)
+                    .arg(getDifficultyString()));
+        } else {
+            timer->stop();
+            timeRecorder->addRecord(secondsElapsed, getDifficultyString());
+
+            QMessageBox::information(this, "游戏胜利",
+                QString("恭喜你赢了！用时: %1 秒\n\n难度: %2")
+                    .arg(secondsElapsed)
+                    .arg(getDifficultyString()));
+        }
     }
 }
 // 新增方法，返回难度的文本描述
@@ -381,7 +450,8 @@ void MainWindow::updateMineCount()
     revealCell(row, col);
     checkGameStatus();
 }*/
-void MainWindow::onButtonClicked(int position) {
+void MainWindow::onButtonClicked(int position)
+{
     int row = position / cols;
     int col = position % cols;
 
@@ -389,24 +459,26 @@ void MainWindow::onButtonClicked(int position) {
 
     if (!gameStarted) {
         gameStarted = true;
-        firstClickRow = row;  // 新增：记录首次点击行
-        firstClickCol = col;  // 新增：记录首次点击列
-        timer->start(1000);
 
-        // 修改：首次点击后才生成地雷，确保当前位置不是地雷
+        // 根据模式启动不同计时器
+        if (isChallengeMode) {
+            challengeTimer->start(1000);
+        } else {
+            timer->start(1000);
+        }
+
+        // 首次点击后才生成地雷，确保当前位置不是地雷
         placeMines();
-        // 如果首次点击位置是地雷，重新生成直到该位置安全
-        while (board[firstClickRow][firstClickCol].isMine) {
+        while (board[row][col].isMine) {
             // 清空当前地雷
-            for (auto& row : board) {
-                for (auto& cell : row) {
+            for (auto& r : board) {
+                for (auto& cell : r) {
                     cell.isMine = false;
                 }
             }
             // 重新生成
             placeMines();
         }
-
         calculateAdjacentMines();
     }
 
@@ -448,11 +520,16 @@ void MainWindow::onDifficultyChanged(int index)
 void MainWindow::resetGame()
 {
     timer->stop();
+    if (challengeTimer) challengeTimer->stop();  // 停止挑战计时器
+
     secondsElapsed = 0;
     timeLabel->setText("000");
+    timeLabel->setStyleSheet("");  // 恢复默认样式
+
     gameOver = false;
     gameStarted = false;
     resetButton->setText("🙂");
-    initBoard();
+    isChallengeMode = false;  // 重置挑战模式
 
+    initBoard();
 }

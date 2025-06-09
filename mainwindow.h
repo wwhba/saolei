@@ -24,7 +24,9 @@ private slots:
     void updateTimer();
     void onButtonClicked(int position);
     void onRightClick(int position);
-
+    void onChallengeButtonClicked();  // 挑战按钮点击事件
+    void updateChallengeTimer();
+        void startChallenge(int seconds);
 private:
     struct Cell {
         bool isMine;
@@ -61,7 +63,10 @@ private:
 
     // 新增时间记录器
     TimeRecorder* timeRecorder;
-
+    QPushButton *challengeButton;     // 挑战按钮
+        QTimer *challengeTimer;           // 挑战模式计时器
+        int challengeSecondsRemaining;    // 挑战剩余时间
+        bool isChallengeMode;
     void setupUI();
     void setDifficulty(Difficulty diff);
     void initBoard();
