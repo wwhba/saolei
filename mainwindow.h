@@ -24,7 +24,7 @@ private slots:
     void updateTimer();
     void onButtonClicked(int position);
     void onRightClick(int position);
-    void onChallengeButtonClicked();  // 挑战按钮点击事件
+    void onChallengeButtonClicked();
     void updateChallengeTimer();
         void startChallenge(int seconds);
 private:
@@ -50,9 +50,9 @@ private:
     int rows, cols, numMines;
     Difficulty currentDifficulty;
 
-    int firstClickRow, firstClickCol;     // 记录首次点击的行列位置
-    bool isFirstClick;                      // 标记是否为首次点击
-    // UI 控件
+    int firstClickRow, firstClickCol;
+    bool isFirstClick;
+
     QComboBox *difficultyCombo;
     QLabel *mineCountLabel;
     QLabel *timeLabel;
@@ -61,11 +61,11 @@ private:
     QSignalMapper *leftClickMapper;
     QSignalMapper *rightClickMapper;
 
-    // 新增时间记录器
+
     TimeRecorder* timeRecorder;
-    QPushButton *challengeButton;     // 挑战按钮
-        QTimer *challengeTimer;           // 挑战模式计时器
-        int challengeSecondsRemaining;    // 挑战剩余时间
+    QPushButton *challengeButton;
+        QTimer *challengeTimer;
+        int challengeSecondsRemaining;
         bool isChallengeMode;
     void setupUI();
     void setDifficulty(Difficulty diff);
@@ -77,7 +77,7 @@ private:
     void checkGameStatus();
     void resetGame();
     void updateMineCount();
-    QString getDifficultyString() const;  // 新增方法
+    QString getDifficultyString() const;
 };
 
 #endif // MAINWINDOW_H
