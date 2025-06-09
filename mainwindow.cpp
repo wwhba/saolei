@@ -166,6 +166,7 @@ void MainWindow::onChallengeButtonClicked()
         startChallenge(seconds);
     }
 }
+//whb增添的功能
 void MainWindow::startChallenge(int seconds)
 {
     isChallengeMode = true;
@@ -356,7 +357,7 @@ void MainWindow::revealAllMines()
         }
     }
 }
-
+//whb修改的
 void MainWindow::checkGameStatus()
 {
     bool allNonMinesRevealed = true;
@@ -403,7 +404,7 @@ void MainWindow::checkGameStatus()
         }
     }
 }
-// 新增方法，返回难度的文本描述
+//whb新增方法，返回难度的文本描述
 QString MainWindow::getDifficultyString() const
 {
     switch (currentDifficulty) {
@@ -450,6 +451,7 @@ void MainWindow::updateMineCount()
     revealCell(row, col);
     checkGameStatus();
 }*/
+//whb修改过
 void MainWindow::onButtonClicked(int position)
 {
     int row = position / cols;
