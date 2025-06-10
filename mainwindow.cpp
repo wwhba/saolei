@@ -8,15 +8,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <QInputDialog>
-/*MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent),
-    timer(new QTimer(this)),
-    secondsElapsed(0),
-    gameOver(false),
-    gameStarted(false),
-    currentDifficulty(Beginner),
-    leftClickMapper(new QSignalMapper(this)),
-    rightClickMapper(new QSignalMapper(this))*/
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
       timer(new QTimer(this)),
@@ -26,29 +18,26 @@ MainWindow::MainWindow(QWidget *parent)
       currentDifficulty(Beginner),
       leftClickMapper(new QSignalMapper(this)),
       rightClickMapper(new QSignalMapper(this)),
-      isFirstClick(true), // 新增：初始化首次点击标记
-      timeRecorder(new TimeRecorder(this)), // 初始化时间记录器
-    challengeTimer(nullptr),  // 先置空
+      isFirstClick(true),
+      timeRecorder(new TimeRecorder(this)),
+    challengeTimer(nullptr),
           challengeSecondsRemaining(0),
           isChallengeMode(false)
 {
     setWindowTitle("扫雷");
     setupUI();
 
-    // 连接信号槽
     connect(difficultyCombo, SIGNAL(currentIndexChanged(int)), this, SLOT(onDifficultyChanged(int)));
     connect(resetButton, SIGNAL(clicked()), this, SLOT(onResetButtonClicked()));
     connect(timer, SIGNAL(timeout()), this, SLOT(updateTimer()));
     connect(leftClickMapper, SIGNAL(mapped(int)), this, SLOT(onButtonClicked(int)));
     connect(rightClickMapper, SIGNAL(mapped(int)), this, SLOT(onRightClick(int)));
 
-    // 设置初始难度
     setDifficulty(Beginner);
     resetGame();
-    // 窗口先根据内容自动调整大小
+
     adjustSize();
 
-    // 再居中显示（动态获取屏幕和窗口尺寸）
     QDesktopWidget *desktop = QApplication::desktop();
     int screenWidth = desktop->width();
     int screenHeight = desktop->height();
@@ -68,44 +57,37 @@ MainWindow::~MainWindow()
 
 void MainWindow::setupUI()
 {
-    // 创建中心部件
+
     centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
 
-    // 创建主布局
     QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
     mainLayout->setSpacing(10);
     mainLayout->setMargin(10);
 
-    // 创建顶部控件区域
     QWidget *topWidget = new QWidget(this);
     QHBoxLayout *topLayout = new QHBoxLayout(topWidget);
     topLayout->setSpacing(10);
     topLayout->setMargin(0);
 
-    // 难度选择
     difficultyCombo = new QComboBox(this);
     difficultyCombo->addItem("初级");
     difficultyCombo->addItem("中级");
     difficultyCombo->addItem("高级");
     topLayout->addWidget(difficultyCombo);
 
-    // 雷数标签
     mineCountLabel = new QLabel("000", this);
     mineCountLabel->setFixedWidth(50);
     topLayout->addWidget(mineCountLabel);
 
-    // 重置按钮
     resetButton = new QPushButton("🙂", this);
     resetButton->setFixedSize(30, 30);
     topLayout->addWidget(resetButton);
 
-    // 时间标签
     timeLabel = new QLabel("000", this);
     timeLabel->setFixedWidth(50);
     topLayout->addWidget(timeLabel);
 
-    // 新增：查看记录按钮
     QPushButton* recordsButton = new QPushButton("查看记录", this);
     topLayout->addWidget(recordsButton);
     connect(recordsButton, &QPushButton::clicked, [this]() {
@@ -128,10 +110,10 @@ void MainWindow::setupUI()
     challengeButton = new QPushButton("挑战", this);
         topLayout->addWidget(challengeButton);
         connect(challengeButton, &QPushButton::clicked, this, &MainWindow::onChallengeButtonClicked);
-    // 将顶部区域添加到主布局
+
     mainLayout->addWidget(topWidget);
 
-    // 创建游戏网格区域
+
     QGridLayout *gridLayout = new QGridLayout();
     gridLayout->setHorizontalSpacing(0);
     gridLayout->setVerticalSpacing(0);
@@ -140,7 +122,6 @@ void MainWindow::setupUI()
     mainLayout->addLayout(gridLayout);
 
 
-    // 居中窗口
     QDesktopWidget *desktop = QApplication::desktop();
     int screenWidth = desktop->width();
     int screenHeight = desktop->height();
@@ -155,10 +136,10 @@ void MainWindow::onChallengeButtonClicked()
         this,
         "设置挑战时间",
         "请输入挑战时间（秒）:",
-        60,       // 默认值
-        10,       // 最小值
-        300,      // 最大值
-        1,        // 步长
+        60,
+        10,
+        300,
+        1,
         &ok
     );
 
@@ -166,19 +147,15 @@ void MainWindow::onChallengeButtonClicked()
         startChallenge(seconds);
     }
 }
-//whb增添的功能
 void MainWindow::startChallenge(int seconds)
 {
     isChallengeMode = true;
     challengeSecondsRemaining = seconds;
 
-    // 重置游戏状态
     resetGame();
 
-    // 更新时间显示
     timeLabel->setText(QString("%1").arg(challengeSecondsRemaining, 3, 10, QChar('0')));
 
-    // 启动挑战计时器
     if (!challengeTimer) {
         challengeTimer = new QTimer(this);
         connect(challengeTimer, &QTimer::timeout, this, &MainWindow::updateChallengeTimer);
@@ -191,12 +168,10 @@ void MainWindow::updateChallengeTimer()
         challengeSecondsRemaining--;
         timeLabel->setText(QString("%1").arg(challengeSecondsRemaining, 3, 10, QChar('0')));
 
-        // 时间快用完时变红提醒
         if (challengeSecondsRemaining <= 10) {
             timeLabel->setStyleSheet("color: red; font-weight: bold;");
         }
     } else {
-        // 时间到，游戏失败
         challengeTimer->stop();
         gameOver = true;
         revealAllMines();
@@ -225,7 +200,6 @@ void MainWindow::initBoard()
     QGridLayout *gridLayout = dynamic_cast<QGridLayout*>(centralWidget->layout()->itemAt(1));
     if (!gridLayout) return;
 
-    // 清空旧网格
     while (gridLayout->count() > 0) {
         QLayoutItem* item = gridLayout->takeAt(0);
         if (QWidget* widget = item->widget()) {
@@ -245,12 +219,10 @@ void MainWindow::initBoard()
             board[i][j].button->setStyleSheet("border: 1px solid gray; background-color: #ccc;");
             gridLayout->addWidget(board[i][j].button, i, j);
 
-            // 使用 QSignalMapper 映射左键点击
             int position = i * cols + j;
             connect(board[i][j].button, SIGNAL(clicked()), leftClickMapper, SLOT(map()));
             leftClickMapper->setMapping(board[i][j].button, position);
 
-            // 使用 QSignalMapper 映射右键点击
             board[i][j].button->setContextMenuPolicy(Qt::CustomContextMenu);
             connect(board[i][j].button, SIGNAL(customContextMenuRequested(const QPoint&)), rightClickMapper, SLOT(map()));
             rightClickMapper->setMapping(board[i][j].button, position);
@@ -266,18 +238,6 @@ void MainWindow::initBoard()
     adjustSize();
 }
 
-void MainWindow::placeMines()
-{
-    int minesPlaced = 0;
-    while (minesPlaced < numMines) {
-        int row = rand() % rows;
-        int col = rand() % cols;
-        if (!board[row][col].isMine) {
-            board[row][col].isMine = true;
-            minesPlaced++;
-        }
-    }
-}
 
 void MainWindow::calculateAdjacentMines()
 {
@@ -357,7 +317,7 @@ void MainWindow::revealAllMines()
         }
     }
 }
-//whb修改的
+
 void MainWindow::checkGameStatus()
 {
     bool allNonMinesRevealed = true;
@@ -383,10 +343,9 @@ void MainWindow::checkGameStatus()
         }
         gameOver = true;
 
-        // 停止计时器
         if (isChallengeMode) {
             challengeTimer->stop();
-            // 记录挑战成功时间
+
             timeRecorder->addRecord(challengeSecondsRemaining, getDifficultyString() + " (挑战模式)");
 
             QMessageBox::information(this, "挑战成功",
@@ -404,7 +363,7 @@ void MainWindow::checkGameStatus()
         }
     }
 }
-//whb新增方法，返回难度的文本描述
+
 QString MainWindow::getDifficultyString() const
 {
     switch (currentDifficulty) {
@@ -434,24 +393,7 @@ void MainWindow::updateMineCount()
     mineCountLabel->setText(QString("%1").arg(remaining, 3, 10, QChar('0')));
 }
 
-/*void MainWindow::onButtonClicked(int position)
-{
-    int row = position / cols;
-    int col = position % cols;
 
-    if (gameOver || board[row][col].isRevealed || board[row][col].isFlagged) return;
-
-    if (!gameStarted) {
-        gameStarted = true;
-        placeMines();
-        calculateAdjacentMines();
-        timer->start(1000);
-    }
-
-    revealCell(row, col);
-    checkGameStatus();
-}*/
-//whb修改过
 void MainWindow::onButtonClicked(int position)
 {
     int row = position / cols;
@@ -461,33 +403,46 @@ void MainWindow::onButtonClicked(int position)
 
     if (!gameStarted) {
         gameStarted = true;
+        firstClickRow = row;
+        firstClickCol = col; // 记录首次点击位置
 
-        // 根据模式启动不同计时器
+        // 根据模式启动计时器
         if (isChallengeMode) {
             challengeTimer->start(1000);
         } else {
             timer->start(1000);
         }
 
-        // 首次点击后才生成地雷，确保当前位置不是地雷
-        placeMines();
-        while (board[row][col].isMine) {
-            // 清空当前地雷
-            for (auto& r : board) {
-                for (auto& cell : r) {
-                    cell.isMine = false;
-                }
-            }
-            // 重新生成
-            placeMines();
-        }
+        // 生成地雷时排除首次点击周围8格
+        placeMinesWithSafety(); // 新增安全生成逻辑
         calculateAdjacentMines();
     }
 
     revealCell(row, col);
     checkGameStatus();
 }
+void MainWindow::placeMinesWithSafety()
+{
+    // 定义首次点击周围的安全区域（行和列的范围）
+    int startRow = qMax(0, firstClickRow - 1);
+    int endRow = qMin(rows - 1, firstClickRow + 1);
+    int startCol = qMax(0, firstClickCol - 1);
+    int endCol = qMin(cols - 1, firstClickCol + 1);
 
+    int minesPlaced = 0;
+    while (minesPlaced < numMines) {
+        int row = rand() % rows;
+        int col = rand() % cols;
+        // 检查是否在安全区域内（若在，则跳过）
+        if (row >= startRow && row <= endRow && col >= startCol && col <= endCol) {
+            continue; // 安全区域内不允许生成地雷
+        }
+        if (!board[row][col].isMine) {
+            board[row][col].isMine = true;
+            minesPlaced++;
+        }
+    }
+}
 void MainWindow::onRightClick(int position)
 {
     int row = position / cols;
@@ -522,16 +477,19 @@ void MainWindow::onDifficultyChanged(int index)
 void MainWindow::resetGame()
 {
     timer->stop();
-    if (challengeTimer) challengeTimer->stop();  // 停止挑战计时器
+    if (challengeTimer) challengeTimer->stop();
 
     secondsElapsed = 0;
     timeLabel->setText("000");
-    timeLabel->setStyleSheet("");  // 恢复默认样式
+    timeLabel->setStyleSheet("");
 
     gameOver = false;
     gameStarted = false;
     resetButton->setText("🙂");
-    isChallengeMode = false;  // 重置挑战模式
+    isChallengeMode = false;
 
     initBoard();
+
+    isFirstClick = true; // 新增：标记首次点击未发生
+        gameStarted = false;
 }
