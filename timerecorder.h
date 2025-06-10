@@ -24,7 +24,7 @@ public:
     void addRecord(int seconds, const QString& difficulty);
     QList<TimeRecord> getSortedRecords() const;
     void saveRecords() const;
-
+    void clearRecords();
 private:
     QList<TimeRecord> records;
     QString filePath;

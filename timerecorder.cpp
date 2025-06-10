@@ -67,3 +67,8 @@ void TimeRecorder::saveRecords() const
 
     file.close();
 }
+void TimeRecorder::clearRecords()
+{
+    records.clear();
+    saveRecords();
+}

@@ -9,7 +9,18 @@
 #include <QSignalMapper>
 #include <vector>
 #include "timerecorder.h"
+#include <QScrollArea>
+#include <QVBoxLayout>
+#include <QDialog>
 
+class RecordsDialog : public QDialog
+{
+    Q_OBJECT
+public:
+    explicit RecordsDialog(const QList<TimeRecord>& records, QWidget* parent = nullptr);
+signals:
+    void clearRecordsRequested();
+};
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -27,6 +38,8 @@ private slots:
     void onChallengeButtonClicked();
     void updateChallengeTimer();
     void startChallenge(int seconds);
+    void clearRecords();
+    void onRecordsButtonClicked();
 private:
     struct Cell {
         bool isMine;
@@ -78,6 +91,7 @@ private:
     void resetGame();
     void updateMineCount();
     QString getDifficultyString() const;
+
 };
 
 #endif // MAINWINDOW_H

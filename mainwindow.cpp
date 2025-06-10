@@ -57,7 +57,6 @@ MainWindow::~MainWindow()
 
 void MainWindow::setupUI()
 {
-
     centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
 
@@ -90,29 +89,13 @@ void MainWindow::setupUI()
 
     QPushButton* recordsButton = new QPushButton("查看记录", this);
     topLayout->addWidget(recordsButton);
-    connect(recordsButton, &QPushButton::clicked, [this]() {
-        QList<TimeRecord> records = timeRecorder->getSortedRecords();
-        if (records.isEmpty()) {
-            QMessageBox::information(this, "游戏记录", "暂无记录");
-            return;
-        }
+    connect(recordsButton, &QPushButton::clicked, this, &MainWindow::onRecordsButtonClicked);
 
-        QString message = "游戏记录 (按时间排序):\n\n";
-        for (const auto& record : records) {
-            message += QString("%1秒 - %2 - %3\n")
-                .arg(record.seconds)
-                .arg(record.date.toString("yyyy-MM-dd HH:mm:ss"))
-                .arg(record.difficulty);
-        }
-
-        QMessageBox::information(this, "游戏记录", message);
-    });
     challengeButton = new QPushButton("挑战", this);
-        topLayout->addWidget(challengeButton);
-        connect(challengeButton, &QPushButton::clicked, this, &MainWindow::onChallengeButtonClicked);
+    topLayout->addWidget(challengeButton);
+    connect(challengeButton, &QPushButton::clicked, this, &MainWindow::onChallengeButtonClicked);
 
     mainLayout->addWidget(topWidget);
-
 
     QGridLayout *gridLayout = new QGridLayout();
     gridLayout->setHorizontalSpacing(0);
@@ -120,7 +103,6 @@ void MainWindow::setupUI()
     gridLayout->setMargin(0);
     gridLayout->setSizeConstraint(QLayout::SetFixedSize);
     mainLayout->addLayout(gridLayout);
-
 
     QDesktopWidget *desktop = QApplication::desktop();
     int screenWidth = desktop->width();
@@ -138,7 +120,7 @@ void MainWindow::onChallengeButtonClicked()
         "请输入挑战时间（秒）:",
         60,
         10,
-        300,
+        1000,
         1,
         &ok
     );
@@ -149,10 +131,9 @@ void MainWindow::onChallengeButtonClicked()
 }
 void MainWindow::startChallenge(int seconds)
 {
+    resetGame();
     isChallengeMode = true;
     challengeSecondsRemaining = seconds;
-
-    resetGame();
 
     timeLabel->setText(QString("%1").arg(challengeSecondsRemaining, 3, 10, QChar('0')));
 
@@ -404,17 +385,16 @@ void MainWindow::onButtonClicked(int position)
     if (!gameStarted) {
         gameStarted = true;
         firstClickRow = row;
-        firstClickCol = col; // 记录首次点击位置
+        firstClickCol = col;
 
-        // 根据模式启动计时器
         if (isChallengeMode) {
             challengeTimer->start(1000);
         } else {
             timer->start(1000);
         }
 
-        // 生成地雷时排除首次点击周围8格
-        placeMinesWithSafety(); // 新增安全生成逻辑
+
+        placeMinesWithSafety();
         calculateAdjacentMines();
     }
 
@@ -423,7 +403,7 @@ void MainWindow::onButtonClicked(int position)
 }
 void MainWindow::placeMinesWithSafety()
 {
-    // 定义首次点击周围的安全区域（行和列的范围）
+
     int startRow = qMax(0, firstClickRow - 1);
     int endRow = qMin(rows - 1, firstClickRow + 1);
     int startCol = qMax(0, firstClickCol - 1);
@@ -433,9 +413,9 @@ void MainWindow::placeMinesWithSafety()
     while (minesPlaced < numMines) {
         int row = rand() % rows;
         int col = rand() % cols;
-        // 检查是否在安全区域内（若在，则跳过）
+
         if (row >= startRow && row <= endRow && col >= startCol && col <= endCol) {
-            continue; // 安全区域内不允许生成地雷
+            continue;
         }
         if (!board[row][col].isMine) {
             board[row][col].isMine = true;
@@ -449,11 +429,6 @@ void MainWindow::onRightClick(int position)
     int col = position % cols;
 
     if (gameOver || board[row][col].isRevealed) return;
-
-    if (!gameStarted) {
-        gameStarted = true;
-        timer->start(1000);
-    }
 
     board[row][col].isFlagged = !board[row][col].isFlagged;
     board[row][col].button->setText(board[row][col].isFlagged ? "F" : "");
@@ -490,6 +465,97 @@ void MainWindow::resetGame()
 
     initBoard();
 
-    isFirstClick = true; // 新增：标记首次点击未发生
+    isFirstClick = true;
         gameStarted = false;
+}
+RecordsDialog::RecordsDialog(const QList<TimeRecord>& records, QWidget* parent)
+    : QDialog(parent)
+{
+    setWindowTitle("游戏记录");
+    setFixedSize(200, 300);
+
+    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+
+    QScrollArea* scrollArea = new QScrollArea(this);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+
+    QWidget* scrollWidget = new QWidget(scrollArea);
+    QVBoxLayout* scrollLayout = new QVBoxLayout(scrollWidget);
+    scrollLayout->setSpacing(5);
+    scrollLayout->setMargin(10);
+
+    if (records.isEmpty()) {
+        QLabel* emptyLabel = new QLabel("暂无记录", scrollWidget);
+        emptyLabel->setAlignment(Qt::AlignCenter);
+        emptyLabel->setStyleSheet("color: #999;");
+        scrollLayout->addWidget(emptyLabel);
+    } else {
+        for (const auto& record : records) {
+            QString timeStr = QString("%1秒").arg(record.seconds);
+            /*QString dateStr = record.date.toString("yyyy-MM-dd HH:mm:ss");*/
+            QString difficultyStr = record.difficulty;
+
+            QString recordText = QString("%1-%3")
+                .arg(timeStr)
+                /*.arg(dateStr)*/
+                .arg(difficultyStr);
+
+            QLabel* recordLabel = new QLabel(recordText, scrollWidget);
+            recordLabel->setStyleSheet("border-bottom: 1px solid #eee; padding-bottom: 5px;");
+            scrollLayout->addWidget(recordLabel);
+        }
+    }
+
+    scrollWidget->setLayout(scrollLayout);
+    scrollArea->setWidget(scrollWidget);
+    mainLayout->addWidget(scrollArea);
+
+    QHBoxLayout* buttonLayout = new QHBoxLayout();
+    QPushButton* clearButton = new QPushButton("清除所有记录", this);
+    connect(clearButton, &QPushButton::clicked, this, [this]() {
+        emit clearRecordsRequested();
+    });
+    buttonLayout->addWidget(clearButton);
+    mainLayout->addLayout(buttonLayout);
+
+    connect(this, &RecordsDialog::clearRecordsRequested,
+            [this]() { accept(); });
+}
+
+void MainWindow::onRecordsButtonClicked()
+{
+
+    QList<TimeRecord> records = timeRecorder->getSortedRecords();
+    RecordsDialog* dialog = new RecordsDialog(records, this);
+
+    connect(dialog, &RecordsDialog::clearRecordsRequested, [this]() {
+        timeRecorder->clearRecords();
+        QMessageBox::information(this, "提示", "记录已全部清除");
+    });
+
+    dialog->exec();
+}
+void MainWindow::clearRecords()
+{
+    int result = QMessageBox::question(
+        this,
+        "确认清除",
+        "确定要清除所有游戏记录吗？此操作不可恢复。",
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No
+    );
+
+    if (result == QMessageBox::Yes) {
+        // 调用 TimeRecorder 清除记录
+        timeRecorder->clearRecords();
+
+        // 显示成功提示
+        QMessageBox::information(
+            this,
+            "操作成功",
+            "所有游戏记录已清除。"
+        );
+    }
 }
