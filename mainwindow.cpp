@@ -25,6 +25,7 @@ MainWindow::MainWindow(QWidget *parent)
           isChallengeMode(false)
 {
     setWindowTitle("扫雷");
+    setWindowFlags(windowFlags() & ~Qt::WindowMaximizeButtonHint);
     setupUI();
 
     connect(difficultyCombo, SIGNAL(currentIndexChanged(int)), this, SLOT(onDifficultyChanged(int)));
@@ -104,12 +105,7 @@ void MainWindow::setupUI()
     gridLayout->setSizeConstraint(QLayout::SetFixedSize);
     mainLayout->addLayout(gridLayout);
 
-    QDesktopWidget *desktop = QApplication::desktop();
-    int screenWidth = desktop->width();
-    int screenHeight = desktop->height();
-    int windowWidth = 300;
-    int windowHeight = 400;
-    setGeometry((screenWidth - windowWidth) / 2, (screenHeight - windowHeight) / 2, windowWidth, windowHeight);
+
 }
 void MainWindow::onChallengeButtonClicked()
 {
@@ -216,6 +212,7 @@ void MainWindow::initBoard()
     }
 
     updateMineCount();
+    centralWidget->layout()->activate();
     adjustSize();
 }
 
